@@ -10,7 +10,7 @@ function About() {
       {/* Content sits on top of the overlay */}
       <div style={styles.container}>
         <div style={styles.imageBox}>
-          <img src={portrait1} alt="Pelumi Afolayan" style={styles.image} />
+          <img src={portrait1} alt="Pelumi Afolayan" className="about-image" style={styles.image} />
         </div>
         <div style={styles.textBox}>
           <p style={styles.subtitle}>About Me</p>

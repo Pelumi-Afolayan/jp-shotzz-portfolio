@@ -2,7 +2,7 @@ import bgImage from '../images/hero/bgImage.jpg'
 
 function Hero() {
   return (
-    <section style={{...styles.hero, backgroundImage: `url(${bgImage})`}}>
+    <section className="hero-section" style={{...styles.hero, backgroundImage: `url(${bgImage})`}}>
       {/* Dark overlay so text stays readable over the background image */}
       <div style={styles.overlay}></div>
 
