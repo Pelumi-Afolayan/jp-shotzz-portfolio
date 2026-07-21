@@ -3,13 +3,10 @@ import bgImage2 from '../images/about/bgImage2.jpg'
 function About() {
   return (
     <section id="about" style={styles.section}>
-
-      {/* Dark overlay over the background image — 70% opacity */}
       <div style={styles.overlay}></div>
 
-      {/* Content sits on top of the overlay */}
-      <div style={styles.container}>
-        <div style={styles.imageBox}>
+      <div className="about-container" style={styles.container}>
+        <div className="about-image-box" style={styles.imageBox}>
           <img src={portrait1} alt="Pelumi Afolayan" className="about-image" style={styles.image} />
         </div>
         <div style={styles.textBox}>
@@ -29,7 +26,6 @@ function About() {
           <a href="#contact" style={styles.button} className="btn-hover">Work With Me</a>
         </div>
       </div>
-
     </section>
   )
 }

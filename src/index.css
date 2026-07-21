@@ -115,31 +115,25 @@ footer a:hover {
     line-height: 1.3 !important;
   }
 
-  /* ── About ── */
-  #about .container,
-  #about > div > div {
+ /* ── About ── */
+  .about-container {
     flex-direction: column !important;
     gap: 40px !important;
     padding: 60px 24px !important;
   }
 
+  .about-image-box {
+    width: 100% !important;
+  }
+
   .about-image {
+    width: 100% !important;
     height: 350px !important;
     object-position: center 20% !important;
   }
 
   #about h2 {
     font-size: 32px !important;
-  }
-
-  /* ── Portfolio ── */
-  #portfolio {
-    padding: 80px 24px !important;
-  }
-
-  #portfolio .grid,
-  #portfolio > div > div {
-    grid-template-columns: repeat(1, 1fr) !important;
   }
 
   /* ── Services ── */
