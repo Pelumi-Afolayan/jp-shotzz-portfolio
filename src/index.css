@@ -1,0 +1,146 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Raleway:wght@300;400;500&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --gold: #C9A84C;
+  --cream: #F5F0E8;
+  --dark: #0D0D0D;
+  --grey: #888888;
+}
+
+body {
+  background-color: var(--dark);
+  color: var(--cream);
+  font-family: 'Raleway', sans-serif;
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3 {
+  font-family: 'Playfair Display', serif;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+/* ─── HOVER EFFECTS ─────────────────────────────────────────── */
+
+/* Nav links turn gold on hover */
+nav a:hover {
+  color: #C9A84C !important;
+}
+
+/* Portfolio and service cards scale up slightly on hover */
+.card-hover:hover {
+  transform: scale(1.02);
+  transition: transform 0.3s ease;
+}
+
+/* Buttons fill gold on hover */
+.btn-hover:hover {
+  background-color: #C9A84C !important;
+  color: #0D0D0D !important;
+  transition: all 0.3s ease;
+}
+
+/* Footer links turn gold on hover */
+footer a:hover {
+  color: #C9A84C !important;
+}
+
+/* Back button hover */
+.back-btn-hover:hover {
+  background-color: #C9A84C !important;
+  color: #0D0D0D !important;
+  transition: all 0.3s ease;
+}
+
+/* ─── RESPONSIVE — MOBILE ───────────────────────────────────── */
+
+@media (max-width: 768px) {
+
+  /* ── Navbar ── */
+  nav {
+    padding: 16px 24px !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  nav ul {
+    gap: 16px !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+
+  /* ── Hero ── */
+  #hero h1, 
+  section h1 {
+    font-size: 36px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* ── About ── */
+  #about .container,
+  #about > div > div {
+    flex-direction: column !important;
+    gap: 40px !important;
+    padding: 60px 24px !important;
+  }
+
+  /* ── Portfolio ── */
+  #portfolio {
+    padding: 80px 24px !important;
+  }
+
+  #portfolio .grid,
+  #portfolio > div > div {
+    grid-template-columns: repeat(1, 1fr) !important;
+  }
+
+  /* ── Services ── */
+  #services {
+    padding: 80px 24px !important;
+  }
+
+  #services > div:nth-child(2) {
+    grid-template-columns: repeat(1, 1fr) !important;
+  }
+
+  /* ── Contact ── */
+  #contact {
+    padding: 80px 24px !important;
+  }
+
+  #contact > div:nth-child(2) {
+    flex-direction: column !important;
+    gap: 40px !important;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 60px 24px 32px 24px !important;
+  }
+
+  footer > div:first-child {
+    flex-direction: column !important;
+    gap: 32px !important;
+    text-align: center !important;
+  }
+
+  footer > div:last-child {
+    flex-direction: column !important;
+    gap: 8px !important;
+    text-align: center !important;
+  }
+}
