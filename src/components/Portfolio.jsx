@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import portraitCover from '../images/portfolio/portraitCover.jpg'
 import headshotCover from '../images/portfolio/headshotCover.jpg'
 import eventCover from '../images/portfolio/eventCover.JPG'
@@ -62,7 +63,7 @@ import cve4 from '../images/portfolio/headshots/run-cve-excos/cve4.jpg'
 import cve5 from '../images/portfolio/headshots/run-cve-excos/cve5.jpg'
 import cve6 from '../images/portfolio/headshots/run-cve-excos/cve6.jpg'
 import cve7 from '../images/portfolio/headshots/run-cve-excos/cve7.jpg'
-import phe1 from '../images/portfolio/headshots/run-phe/phe1.jpg' 
+import phe1 from '../images/portfolio/headshots/run-phe/phe1.jpg'
 import phe2 from '../images/portfolio/headshots/run-phe/phe2.jpg'
 import phe3 from '../images/portfolio/headshots/run-phe/phe3.jpg'
 import phe4 from '../images/portfolio/headshots/run-phe/phe4.jpg'
@@ -81,12 +82,10 @@ const techfestPhotos = Object.values(
   import.meta.glob('../images/portfolio/events/tech-fest/*.jpg', { eager: true })
 ).map(module => module.default)
 
-
 // ARC - imports all photos in the folder automatically
 const arcPhotos = Object.values(
   import.meta.glob('../images/portfolio/events/arc/*.jpg', { eager: true })
 ).map(module => module.default)
-
 
 // All portfolio data lives here — add new shoots and categories in this object
 const portfolioData = {
@@ -96,10 +95,9 @@ const portfolioData = {
     { id: 3, name: 'Events', description: 'Moments & Memories', cover: eventCover, ratio: '3/2' },
     { id: 4, name: 'Sports', description: 'Action & Energy', cover: sportCover, ratio: '3/2' },
   ],
-  // Each category has its own array of shoots
   shoots: {
     Portraits: [
-     { id: 1, name: 'David Abraham', cover: da1, photos: [da1, da2, da3, da4, da5, da6, da7, da8] },
+      { id: 1, name: 'David Abraham', cover: da1, photos: [da1, da2, da3, da4, da5, da6, da7, da8] },
       { id: 2, name: 'Dorcas Oladapo', cover: do1, photos: [do1, do2, do3, do4, do5] },
       { id: 3, name: 'Akinola Boluwatife', cover: ab1, photos: [ab1, ab2, ab3, ab4, ab5, ab6] },
       { id: 4, name: 'Eniola Motunrayo', cover: em1, photos: [em1, em2, em3, em4, em5, em6] },
@@ -116,8 +114,7 @@ const portfolioData = {
       { id: 2, name: 'TechFest 5.0', cover: techfest3, photos: techfestPhotos },
       { id: 3, name: 'ARC 2.0', cover: arc21, photos: arcPhotos },
     ],
-    Sports: [],   // Coming soon
-    
+    Sports: [], // Coming soon
   }
 }
 
@@ -135,6 +132,15 @@ function Portfolio() {
 
   // Remembers the ratio of the active category e.g. '4/5' or '3/2'
   const [activeRatio, setActiveRatio] = useState('4/5')
+
+  // Whether every photo in the current shoot has finished preloading
+  const [imagesLoaded, setImagesLoaded] = useState(false)
+
+  // Which photo index is open in the lightbox. null = lightbox closed.
+  const [lightboxIndex, setLightboxIndex] = useState(null)
+
+  // Tracks where a mobile swipe started, so we can detect swipe direction on release
+  const [touchStartX, setTouchStartX] = useState(null)
 
   // When a category is clicked store its name and ratio, switch to shoots view
   function handleCategoryClick(category) {
@@ -168,6 +174,83 @@ function Portfolio() {
     return portfolioData.shoots[activeCategory].find(s => s.name === activeShoot)
   }
 
+  // Preload every photo in the shoot before revealing the grid, so the user
+  // never sees images popping in one by one. Runs whenever we enter the
+  // photos view, or switch to a different shoot.
+  useEffect(() => {
+    if (view !== 'photos') return
+    const shoot = getCurrentShoot()
+    if (!shoot || shoot.photos.length === 0) {
+      setImagesLoaded(true)
+      return
+    }
+    setImagesLoaded(false)
+    let loadedCount = 0
+    const total = shoot.photos.length
+    shoot.photos.forEach(src => {
+      const img = new Image()
+      img.src = src
+      // Count both successful loads and errors so a single broken image
+      // can't leave the spinner stuck forever.
+      img.onload = img.onerror = () => {
+        loadedCount++
+        if (loadedCount === total) setImagesLoaded(true)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, activeShoot])
+
+  // ── Lightbox controls ─────────────────────────────────────────────────
+
+  function openLightbox(index) {
+    setLightboxIndex(index)
+  }
+
+  function closeLightbox() {
+    setLightboxIndex(null)
+  }
+
+  function nextPhoto() {
+    const shoot = getCurrentShoot()
+    if (!shoot) return
+    setLightboxIndex(prev => (prev + 1) % shoot.photos.length)
+  }
+
+  function prevPhoto() {
+    const shoot = getCurrentShoot()
+    if (!shoot) return
+    setLightboxIndex(prev => (prev - 1 + shoot.photos.length) % shoot.photos.length)
+  }
+
+  // Desktop: left/right arrow keys navigate, Escape closes
+  useEffect(() => {
+    if (lightboxIndex === null) return
+    function handleKeyDown(e) {
+      if (e.key === 'ArrowRight') nextPhoto()
+      if (e.key === 'ArrowLeft') prevPhoto()
+      if (e.key === 'Escape') closeLightbox()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightboxIndex])
+
+  // Mobile: swipe left for next, swipe right for previous
+  function handleTouchStart(e) {
+    setTouchStartX(e.touches[0].clientX)
+  }
+  function handleTouchEnd(e) {
+    if (touchStartX === null) return
+    const touchEndX = e.changedTouches[0].clientX
+    const diff = touchStartX - touchEndX
+    const SWIPE_THRESHOLD = 50 // pixels — avoids triggering on tiny accidental drags
+    if (diff > SWIPE_THRESHOLD) nextPhoto()
+    else if (diff < -SWIPE_THRESHOLD) prevPhoto()
+    setTouchStartX(null)
+  }
+
+  const currentShoot = getCurrentShoot()
+
   return (
     <section id="portfolio" style={styles.section}>
 
@@ -179,20 +262,20 @@ function Portfolio() {
 
       {/* Back button — only shows when not on categories view */}
       {view !== 'categories' && (
-       <button onClick={handleBack} style={styles.backButton} className="back-btn-hover">← Back</button>
+        <button onClick={handleBack} style={styles.backButton} className="back-btn-hover">← Back</button>
       )}
 
       <AnimatePresence mode="wait">
 
         {/* LEVEL 1 — Category cards */}
         {view === 'categories' && (
-              <motion.div
-              key="categories"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={styles.categoriesGrid}  // change from styles.grid
-            >
+          <motion.div
+            key="categories"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={styles.categoriesGrid}
+          >
             {portfolioData.categories.map((category, index) => (
               <motion.div
                 key={category.id}
@@ -203,9 +286,8 @@ function Portfolio() {
                 className="card-hover"
                 onClick={() => handleCategoryClick(category.name)}
               >
-                {/* Cover image with category-specific ratio */}
                 {category.cover ? (
-                   <img
+                  <img
                     src={category.cover}
                     alt={category.name}
                     style={{
@@ -215,10 +297,7 @@ function Portfolio() {
                     }}
                   />
                 ) : (
-                  <div style={{
-                    ...styles.imagePlaceholder,
-                    aspectRatio: category.ratio
-                  }}>
+                  <div style={{ ...styles.imagePlaceholder, aspectRatio: category.ratio }}>
                     <p style={styles.placeholderText}>{category.name}</p>
                   </div>
                 )}
@@ -233,14 +312,9 @@ function Portfolio() {
 
         {/* LEVEL 2 — Shoot cards inside a category */}
         {view === 'shoots' && (
-          <motion.div
-            key="shoots"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <motion.div key="shoots" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <h3 style={styles.viewHeading}>{activeCategory}</h3>
-            <div style={styles.shootsGrid}>
+            <div style={styles.shootsGrid} className="shoots-grid">
               {portfolioData.shoots[activeCategory].length === 0 ? (
                 <p style={styles.comingSoon}>Coming Soon</p>
               ) : (
@@ -254,18 +328,10 @@ function Portfolio() {
                     className="card-hover"
                     onClick={() => handleShootClick(shoot.name)}
                   >
-                    {/* Cover image with shoot-specific ratio */}
                     {shoot.cover ? (
-                   <img
-                    src={shoot.cover}
-                    alt={shoot.name}
-                    style={styles.coverImage}
-                  />
+                      <img src={shoot.cover} alt={shoot.name} style={styles.coverImage} />
                     ) : (
-                      <div style={{
-                        ...styles.imagePlaceholder,
-                        aspectRatio: shoot.ratio
-                      }}>
+                      <div style={{ ...styles.imagePlaceholder, aspectRatio: shoot.ratio }}>
                         <p style={styles.placeholderText}>{shoot.name}</p>
                       </div>
                     )}
@@ -282,15 +348,10 @@ function Portfolio() {
 
         {/* LEVEL 3 — Individual photos inside a shoot */}
         {view === 'photos' && (
-          <motion.div
-            key="photos"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <motion.div key="photos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <h3 style={styles.viewHeading}>{activeShoot}</h3>
 
-            {getCurrentShoot()?.photos.length === 0 ? (
+            {currentShoot?.photos.length === 0 ? (
               // No photos yet — show placeholders
               <div style={styles.photosGrid}>
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -305,10 +366,18 @@ function Portfolio() {
                   </motion.div>
                 ))}
               </div>
+            ) : !imagesLoaded ? (
+              // Photos exist but haven't finished preloading — show spinner
+              <div style={styles.loadingWrap}>
+                <div className="spinner"></div>
+              </div>
             ) : (
-              // Real photos — layout depends on category ratio
-              <div style={activeRatio === '4/5' ? styles.portraitGrid : styles.landscapeGrid}>
-                {getCurrentShoot().photos.map((photo, i) => (
+              // Photos are preloaded — reveal the grid
+              <div
+                style={activeRatio === '4/5' ? styles.portraitGrid : styles.landscapeGrid}
+                className="photos-grid"
+              >
+                {currentShoot.photos.map((photo, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, y: 40 }}
@@ -316,15 +385,12 @@ function Portfolio() {
                     transition={{ delay: i * 0.15, duration: 0.5 }}
                     style={styles.photoWrapper}
                     className="card-hover"
+                    onClick={() => openLightbox(i)}
                   >
                     <img
                       src={photo}
                       alt={`${activeShoot} ${i + 1}`}
-                      style={
-                        activeRatio === '4/5'
-                          ? styles.portraitPhoto   // fixed 4/5 ratio for portraits/headshots
-                          : styles.landscapePhoto  // natural size for sports/events
-                      }
+                      style={activeRatio === '4/5' ? styles.portraitPhoto : styles.landscapePhoto}
                     />
                   </motion.div>
                 ))}
@@ -334,6 +400,65 @@ function Portfolio() {
         )}
 
       </AnimatePresence>
+
+      {/* LIGHTBOX — full-screen photo preview with prev/next navigation.
+          Lives outside the AnimatePresence above so it can stay open
+          independently of which "view" (categories/shoots/photos) is active. */}
+      <AnimatePresence>
+        {lightboxIndex !== null && currentShoot && (
+          <motion.div
+            key="lightbox"
+            style={styles.lightboxOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeLightbox}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <button
+              style={styles.lightboxClose}
+              onClick={(e) => { e.stopPropagation(); closeLightbox() }}
+              aria-label="Close preview"
+            >
+              ✕
+            </button>
+
+            {/* Prev arrow — hidden on very small screens via CSS class, swipe still works there */}
+            <button
+              style={{ ...styles.lightboxArrow, left: '16px' }}
+              onClick={(e) => { e.stopPropagation(); prevPhoto() }}
+              aria-label="Previous photo"
+              className="lightbox-arrow"
+            >
+              ‹
+            </button>
+
+            <motion.img
+              key={lightboxIndex}
+              src={currentShoot.photos[lightboxIndex]}
+              alt={`${activeShoot} preview ${lightboxIndex + 1}`}
+              style={styles.lightboxImage}
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              whileHover={{ scale: 1.02 }}
+            />
+
+            <button
+              style={{ ...styles.lightboxArrow, right: '16px' }}
+              onClick={(e) => { e.stopPropagation(); nextPhoto() }}
+              aria-label="Next photo"
+              className="lightbox-arrow"
+            >
+              ›
+            </button>
+
+            <p style={styles.lightboxCounter}>{lightboxIndex + 1} / {currentShoot.photos.length}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   )
 }
@@ -342,19 +467,20 @@ function Portfolio() {
 
 const styles = {
 
-  // Full section wrapper
   section: {
-    padding: '120px 60px',
+    // clamp() shrinks the side padding smoothly on narrow screens instead of
+    // staying fixed at 60px, which is part of what was causing content to
+    // overflow the right edge on mobile.
+    padding: '120px clamp(16px, 5vw, 60px)',
     backgroundColor: '#0D0D0D',
+    overflowX: 'hidden', // safety net: nothing inside can force horizontal scroll
   },
 
-  // Centered section header
   header: {
     textAlign: 'center',
     marginBottom: '60px',
   },
 
-  // Gold uppercase label
   subtitle: {
     color: '#C9A84C',
     fontSize: '12px',
@@ -363,14 +489,12 @@ const styles = {
     marginBottom: '16px',
   },
 
-  // Main heading
   heading: {
     fontSize: '48px',
     fontFamily: 'Playfair Display, serif',
     color: '#F5F0E8',
   },
 
-  // Heading shown at shoots and photos level
   viewHeading: {
     color: '#F5F0E8',
     fontSize: '28px',
@@ -379,40 +503,55 @@ const styles = {
     textAlign: 'center',
   },
 
-  // 3 column grid for category and shoot cards
-  grid: {
+  // auto-fit + minmax lets the browser choose how many columns fit the
+  // available width — this is the fix for the mobile overflow bug, since a
+  // fixed repeat(2, 1fr) / repeat(3, 1fr) can compute wider than the screen.
+  categoriesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
     gap: '24px',
     maxWidth: '1100px',
     margin: '0 auto',
   },
 
-  // 3 column grid for portrait/headshot photos — tight gap
+  shootsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '24px',
+    maxWidth: '1100px',
+    margin: '0 auto',
+  },
+
   portraitGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
     gap: '8px',
     maxWidth: '1100px',
     margin: '0 auto',
   },
 
-  // 2 column grid for sports/events — more breathing room for landscape
   landscapeGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
     gap: '16px',
     maxWidth: '1100px',
     margin: '0 auto',
   },
 
-  // Card wrapper for category and shoot cards
+  // Used for the "no photos yet" placeholder grid
+  photosGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    maxWidth: '1100px',
+    margin: '0 auto',
+  },
+
   card: {
     backgroundColor: '#1a1a1a',
     cursor: 'pointer',
   },
 
-  // Cover image — ratio applied dynamically per card
   coverImage: {
     width: '100%',
     display: 'block',
@@ -420,7 +559,6 @@ const styles = {
     objectPosition: 'center top',
   },
 
-  // Placeholder box when no cover image exists
   imagePlaceholder: {
     width: '100%',
     backgroundColor: '#222222',
@@ -429,9 +567,9 @@ const styles = {
     justifyContent: 'center',
     border: '1px solid #333',
     minHeight: '200px',
+    boxSizing: 'border-box', // keeps the border from adding to the element's total width
   },
 
-  // Text inside placeholder
   placeholderText: {
     color: '#888',
     fontSize: '12px',
@@ -439,12 +577,10 @@ const styles = {
     textAlign: 'center',
   },
 
-  // Card info below the cover image
   cardInfo: {
     padding: '16px',
   },
 
-  // Gold uppercase category label
   cardCategory: {
     color: '#C9A84C',
     fontSize: '11px',
@@ -453,13 +589,11 @@ const styles = {
     marginBottom: '6px',
   },
 
-  // Card title — shoot name or category description
   cardTitle: {
     color: '#F5F0E8',
     fontSize: '16px',
   },
 
-  // Back button
   backButton: {
     background: 'none',
     border: '1px solid #C9A84C',
@@ -474,7 +608,6 @@ const styles = {
     marginRight: 'auto',
   },
 
-  // Coming soon text for empty categories
   comingSoon: {
     color: '#888',
     fontSize: '14px',
@@ -482,13 +615,11 @@ const styles = {
     textAlign: 'center',
   },
 
-  // Wrapper for each individual photo
   photoWrapper: {
     overflow: 'hidden',
     cursor: 'pointer',
   },
 
-  // Portrait/headshot photo — fixed 4/5 ratio
   portraitPhoto: {
     width: '100%',
     aspectRatio: '4/5',
@@ -497,29 +628,76 @@ const styles = {
     display: 'block',
   },
 
-  // Sports/events photo — natural ratio, no forced crop
   landscapePhoto: {
     width: '100%',
     display: 'block',
     objectFit: 'contain',
   },
 
-  // 2x2 grid for category cards
-  categoriesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '24px',
-    maxWidth: '1100px',
-    margin: '0 auto',
+  // Shown while images are preloading, before the grid is revealed
+  loadingWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '300px',
   },
 
-  // 3 column grid for shoot cards
-  shootsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '24px',
-    maxWidth: '1100px',
-    margin: '0 auto',
+  // ── Lightbox ──────────────────────────────────────────────────────────
+
+  lightboxOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
+    backgroundColor: 'rgba(13, 13, 13, 0.95)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+
+  lightboxImage: {
+    maxWidth: '90vw',
+    maxHeight: '85vh',
+    objectFit: 'contain',
+    display: 'block',
+    cursor: 'default',
+  },
+
+  lightboxClose: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    background: 'none',
+    border: 'none',
+    color: '#F5F0E8',
+    fontSize: '28px',
+    cursor: 'pointer',
+    lineHeight: 1,
+  },
+
+  lightboxArrow: {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    color: '#F5F0E8',
+    fontSize: '48px',
+    cursor: 'pointer',
+    lineHeight: 1,
+    padding: '0 10px',
+  },
+
+  lightboxCounter: {
+    position: 'absolute',
+    bottom: '24px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    color: '#C9A84C',
+    fontSize: '12px',
+    letterSpacing: '2px',
   },
 }
 

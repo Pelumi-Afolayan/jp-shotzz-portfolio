@@ -136,6 +136,21 @@ footer a:hover {
     font-size: 32px !important;
   }
 
+  /* ── Portfolio ── */
+  #portfolio {
+    padding: 80px 24px !important;
+  }
+
+  #portfolio .categories-grid,
+  #portfolio .shoots-grid {
+    grid-template-columns: repeat(1, 1fr) !important;
+  }
+
+  #portfolio .photos-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+
   /* ── Services ── */
   #services {
     padding: 80px 24px !important;
