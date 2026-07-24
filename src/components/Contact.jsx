@@ -2,7 +2,7 @@
 // Gives visitors a way to reach Pelumi directly
 // Connected to EmailJS to send messages to jpshotzz@gmail.com
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import emailjs from '@emailjs/browser'
 
 // EmailJS credentials
@@ -11,6 +11,11 @@ const TEMPLATE_ID = 'template_xq93hrq'
 const PUBLIC_KEY = 'ormE4TfyV06lxuip6'
 
 function Contact() {
+
+  // Initialize EmailJS once when the component mounts
+  useEffect(() => {
+    emailjs.init({ publicKey: PUBLIC_KEY })
+  }, [])
 
   // State to track what the user types into each form field
   const [formData, setFormData] = useState({
@@ -47,7 +52,7 @@ function Contact() {
         email: formData.email,
         service: formData.service,
         message: formData.message,
-      }, PUBLIC_KEY)
+      })
 
       // Success — show success message and reset form
       setSubmitted(true)
@@ -84,7 +89,7 @@ function Contact() {
 
           <div style={styles.infoItem}>
             <p style={styles.infoLabel}>Email</p>
-            <p style={styles.infoValue}>jpshotzz@gmail.com</p>
+            <p style={styles.infoValue}>jayphee247@gmail.com</p>
           </div>
 
           <div style={styles.infoItem}>
