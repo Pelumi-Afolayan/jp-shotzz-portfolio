@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import portraitCover from '../images/portfolio/portraitCover.jpg'
@@ -133,8 +133,10 @@ function Portfolio() {
   // Remembers the ratio of the active category e.g. '4/5' or '3/2'
   const [activeRatio, setActiveRatio] = useState('4/5')
 
-  // Whether every photo in the current shoot has finished preloading
-  const [imagesLoaded, setImagesLoaded] = useState(false)
+  // Tracks which photo indices have finished loading, so each photo can fade
+  // in independently instead of waiting for the whole shoot to be ready.
+  // Shape: { 0: true, 1: true, 2: false, ... }
+  const [loadedPhotos, setLoadedPhotos] = useState({})
 
   // Which photo index is open in the lightbox. null = lightbox closed.
   const [lightboxIndex, setLightboxIndex] = useState(null)
@@ -142,18 +144,32 @@ function Portfolio() {
   // Tracks where a mobile swipe started, so we can detect swipe direction on release
   const [touchStartX, setTouchStartX] = useState(null)
 
+  // Points at the <section> DOM node — used to scroll back to the top of the
+  // portfolio section every time the view changes (categories -> shoots ->
+  // photos -> back), so new content never renders above your current scroll
+  // position.
+  const sectionRef = useRef(null)
+
+  function scrollToSectionTop() {
+    if (sectionRef.current) {
+      sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   // When a category is clicked store its name and ratio, switch to shoots view
   function handleCategoryClick(category) {
     const cat = portfolioData.categories.find(c => c.name === category)
     setActiveCategory(category)
     setActiveRatio(cat.ratio)
     setView('shoots')
+    scrollToSectionTop()
   }
 
   // When a shoot is clicked store its name, switch to photos view
   function handleShootClick(shoot) {
     setActiveShoot(shoot)
     setView('photos')
+    scrollToSectionTop()
   }
 
   // Back button — go one level up
@@ -166,6 +182,7 @@ function Portfolio() {
       setActiveCategory(null)
       setActiveRatio('4/5')
     }
+    scrollToSectionTop()
   }
 
   // Get the current shoot object
@@ -174,31 +191,20 @@ function Portfolio() {
     return portfolioData.shoots[activeCategory].find(s => s.name === activeShoot)
   }
 
-  // Preload every photo in the shoot before revealing the grid, so the user
-  // never sees images popping in one by one. Runs whenever we enter the
-  // photos view, or switch to a different shoot.
+  // Reset which photos are "loaded" whenever we switch shoots, so the new
+  // shoot's images start hidden and fade in as they individually finish
+  // loading — instead of the whole grid waiting on the slowest photo.
+  // (Important for big shoots like TEDxRUN's 210 photos: forcing the
+  // browser to fully download all 210 before showing anything also used to
+  // clog the browser's connection queue, which is why cover images for
+  // other shoots looked slow to load right after leaving TEDxRUN.)
   useEffect(() => {
-    if (view !== 'photos') return
-    const shoot = getCurrentShoot()
-    if (!shoot || shoot.photos.length === 0) {
-      setImagesLoaded(true)
-      return
-    }
-    setImagesLoaded(false)
-    let loadedCount = 0
-    const total = shoot.photos.length
-    shoot.photos.forEach(src => {
-      const img = new Image()
-      img.src = src
-      // Count both successful loads and errors so a single broken image
-      // can't leave the spinner stuck forever.
-      img.onload = img.onerror = () => {
-        loadedCount++
-        if (loadedCount === total) setImagesLoaded(true)
-      }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, activeShoot])
+    setLoadedPhotos({})
+  }, [activeShoot])
+
+  function markPhotoLoaded(index) {
+    setLoadedPhotos(prev => ({ ...prev, [index]: true }))
+  }
 
   // ── Lightbox controls ─────────────────────────────────────────────────
 
@@ -252,7 +258,7 @@ function Portfolio() {
   const currentShoot = getCurrentShoot()
 
   return (
-    <section id="portfolio" style={styles.section}>
+    <section id="portfolio" style={styles.section} ref={sectionRef}>
 
       {/* Section header */}
       <div style={styles.header}>
@@ -275,13 +281,14 @@ function Portfolio() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={styles.categoriesGrid}
+            className="categories-grid"
           >
             {portfolioData.categories.map((category, index) => (
               <motion.div
                 key={category.id}
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.15, duration: 0.5 }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
                 style={styles.card}
                 className="card-hover"
                 onClick={() => handleCategoryClick(category.name)}
@@ -323,7 +330,7 @@ function Portfolio() {
                     key={shoot.id}
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.15, duration: 0.5 }}
+                    transition={{ delay: Math.min(index * 0.1, 0.6), duration: 0.5 }}
                     style={styles.card}
                     className="card-hover"
                     onClick={() => handleShootClick(shoot.name)}
@@ -366,13 +373,10 @@ function Portfolio() {
                   </motion.div>
                 ))}
               </div>
-            ) : !imagesLoaded ? (
-              // Photos exist but haven't finished preloading — show spinner
-              <div style={styles.loadingWrap}>
-                <div className="spinner"></div>
-              </div>
             ) : (
-              // Photos are preloaded — reveal the grid
+              // Grid renders immediately — each photo lazy-loads and fades in
+              // on its own as soon as it's ready, instead of the whole shoot
+              // waiting on its slowest image.
               <div
                 style={activeRatio === '4/5' ? styles.portraitGrid : styles.landscapeGrid}
                 className="photos-grid"
@@ -380,17 +384,28 @@ function Portfolio() {
                 {currentShoot.photos.map((photo, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, y: 40 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.15, duration: 0.5 }}
+                    // Capped so shoots with hundreds of photos (e.g. TEDxRUN)
+                    // don't take 30+ seconds to finish staggering in.
+                    transition={{ delay: Math.min(i * 0.03, 0.6), duration: 0.4 }}
                     style={styles.photoWrapper}
                     className="card-hover"
                     onClick={() => openLightbox(i)}
                   >
+                    {/* Skeleton placeholder shown until this specific photo loads */}
+                    {!loadedPhotos[i] && <div style={styles.photoSkeleton} className="skeleton-pulse" />}
                     <img
                       src={photo}
                       alt={`${activeShoot} ${i + 1}`}
-                      style={activeRatio === '4/5' ? styles.portraitPhoto : styles.landscapePhoto}
+                      loading="lazy"
+                      decoding="async"
+                      onLoad={() => markPhotoLoaded(i)}
+                      style={{
+                        ...(activeRatio === '4/5' ? styles.portraitPhoto : styles.landscapePhoto),
+                        opacity: loadedPhotos[i] ? 1 : 0,
+                        transition: 'opacity 0.35s ease',
+                      }}
                     />
                   </motion.div>
                 ))}
@@ -474,6 +489,7 @@ const styles = {
     padding: '120px clamp(16px, 5vw, 60px)',
     backgroundColor: '#0D0D0D',
     overflowX: 'hidden', // safety net: nothing inside can force horizontal scroll
+    scrollMarginTop: '80px', // keeps content clear of the fixed navbar when we scroll here
   },
 
   header: {
@@ -532,7 +548,10 @@ const styles = {
 
   landscapeGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    // 480px minimum locks this to 2 columns within the 1100px max-width
+    // container on desktop (matching Sports), while still dropping to 1
+    // column automatically on narrow phone screens.
+    gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))',
     gap: '16px',
     maxWidth: '1100px',
     margin: '0 auto',
@@ -616,6 +635,7 @@ const styles = {
   },
 
   photoWrapper: {
+    position: 'relative', // lets photoSkeleton sit exactly on top of the img while it loads
     overflow: 'hidden',
     cursor: 'pointer',
   },
@@ -634,12 +654,14 @@ const styles = {
     objectFit: 'contain',
   },
 
-  // Shown while images are preloading, before the grid is revealed
-  loadingWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '300px',
+  // Sits behind a single photo, filling the space until that photo's onLoad fires
+  photoSkeleton: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#1a1a1a',
   },
 
   // ── Lightbox ──────────────────────────────────────────────────────────
