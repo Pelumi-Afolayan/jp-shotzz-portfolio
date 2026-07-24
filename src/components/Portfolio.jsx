@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import portraitCover from '../images/portfolio/portraitCover.jpg'
 import headshotCover from '../images/portfolio/headshotCover.jpg'
-import eventCover from '../images/portfolio/eventCover.JPG'
+import eventCover from '../images/portfolio/eventCover.jPG'
 import sportCover from '../images/portfolio/sportCover.jpg'
 import tedxrun132 from '../images/portfolio/events/tedXrun/tedxrun132.jpg'
 import techfest3 from '../images/portfolio/events/tech-fest/techfest3.jpg'
