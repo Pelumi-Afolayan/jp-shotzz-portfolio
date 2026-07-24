@@ -389,7 +389,10 @@ function Portfolio() {
                     // Capped so shoots with hundreds of photos (e.g. TEDxRUN)
                     // don't take 30+ seconds to finish staggering in.
                     transition={{ delay: Math.min(i * 0.03, 0.6), duration: 0.4 }}
-                    style={styles.photoWrapper}
+                    style={{
+                      ...styles.photoWrapper,
+                      minHeight: activeRatio === '4/5' || loadedPhotos[i] ? undefined : '140px',
+                    }}
                     className="card-hover"
                     onClick={() => openLightbox(i)}
                   >
@@ -548,11 +551,8 @@ const styles = {
 
   landscapeGrid: {
     display: 'grid',
-    // 480px minimum locks this to 2 columns within the 1100px max-width
-    // container on desktop (matching Sports), while still dropping to 1
-    // column automatically on narrow phone screens.
-    gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: '8px',
     maxWidth: '1100px',
     margin: '0 auto',
   },
@@ -650,8 +650,8 @@ const styles = {
 
   landscapePhoto: {
     width: '100%',
+    height: 'auto', // no forced aspect-ratio — each photo keeps its true proportions
     display: 'block',
-    objectFit: 'contain',
   },
 
   // Sits behind a single photo, filling the space until that photo's onLoad fires
