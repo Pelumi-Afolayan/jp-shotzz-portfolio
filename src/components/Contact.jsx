@@ -1,13 +1,13 @@
 // Contact component
 // Gives visitors a way to reach Pelumi directly
-// Connected to EmailJS to send messages to jpshotzz@gmail.com
+// Connected to EmailJS to send messages to jayphee247@gmail.com
 
 import { useState, useEffect } from 'react'
 import emailjs from '@emailjs/browser'
 
 // EmailJS credentials
 const SERVICE_ID = 'service_x2kcspf'
-const TEMPLATE_ID = 'template_xq93hrq'
+const TEMPLATE_ID = 'template_30q24s6'
 const PUBLIC_KEY = 'ormE4TfyV06lxuip6'
 
 function Contact() {
